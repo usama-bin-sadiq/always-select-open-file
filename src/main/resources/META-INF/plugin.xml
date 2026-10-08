@@ -1,0 +1,44 @@
+<!-- Plugin Configuration File -->
+<!-- https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
+<idea-plugin>
+    <id>com.github.alwaysselectopenedfile</id>
+    <name>Always Select Opened File</name>
+    <version>1.2.0</version>
+    <vendor email="" url="">Always Select Opened File</vendor>
+
+    <description><![CDATA[
+        Automatically enables the Project View option
+        <b>Always Select Opened File</b> (formerly Autoscroll from Source)
+        for every project when it is opened.
+        <br/><br/>
+        If you turn the option off manually for a project, the plugin will not
+        force it back on.
+        <br/><br/>
+        Uses only public IntelliJ Platform APIs (no internal API).
+        Works on all IntelliJ-based IDEs.
+    ]]></description>
+
+    <change-notes><![CDATA[
+        <h3>1.2.0</h3>
+        <ul>
+          <li>Completely rewritten using <b>only public APIs</b></li>
+          <li>Removed all internal API usage (ProjectViewState)</li>
+          <li>Removed scheduled-for-removal ProjectManagerListener.projectOpened</li>
+          <li>Compatible with all IntelliJ-based IDEs</li>
+        </ul>
+        <h3>1.1.x</h3>
+        <ul>
+          <li>Previous versions used internal API</li>
+        </ul>
+    ]]></change-notes>
+
+    <!-- Compatible with 2022.1 and newer, no upper limit -->
+    <idea-version since-build="221"/>
+
+    <!-- Only platform → works on every IntelliJ-based product -->
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="com.github.alwaysselectopenedfile.EnableAlwaysSelectOpenedFileActivity"/>
+    </extensions>
+</idea-plugin>
