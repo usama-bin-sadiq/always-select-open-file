@@ -3,8 +3,10 @@
 <idea-plugin>
     <id>com.github.alwaysselectopenedfile</id>
     <name>Always Select Opened File</name>
-    <!-- Keep in sync with the version in gradle.properties -->
-    <version>1.2.0</version>
+    <!-- Overwritten by patchPluginXml from the version in gradle.properties, which is the single
+         source of truth. Kept here only so the source tree reads correctly; the value below is
+         not what gets published. -->
+    <version>1.2.1</version>
     <vendor email="osama.gormani@gmail.com">Always Select Opened File</vendor>
 
     <description><![CDATA[
