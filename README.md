@@ -90,6 +90,64 @@ To check API compatibility against specific IDEs — including internal-API viol
 > acted on. Compiling against a 2023.1 IDE (`-PplatformPath=...`) silences them and additionally
 > guarantees that no newer-only API is used by accident.
 
+## Publishing
+
+### First upload — manual, unavoidable
+
+The first version of a plugin **must** be uploaded by hand; JetBrains does not allow it to be
+automated:
+
+1. Create a [JetBrains Account](https://account.jetbrains.com).
+2. Go to [JetBrains Marketplace](https://plugins.jetbrains.com/author/me) → *Add new plugin*.
+3. Upload `build/distributions/always-select-opened-file-<version>.zip`.
+
+Before uploading, confirm it works in a real IDE — either `./gradlew runIde`, or
+*Settings → Plugins → ⚙ → Install Plugin from Disk…* in your own IDE.
+
+### Later versions — automated
+
+Once a version exists on the Marketplace, uploads can be automated:
+
+1. Generate a token at [My Tokens](https://plugins.jetbrains.com/author/me/tokens). It is shown
+   only once.
+2. Supply it as an environment variable:
+
+   ```bash
+   export ORG_GRADLE_PROJECT_intellijPlatformPublishingToken='<token>'
+   ```
+
+   Put that line in your shell profile (`~/.zshrc`) so it persists.
+
+   The token is deliberately **not** declared in this repo's `gradle.properties`. That file is
+   committed to git, and a property defined there outranks `~/.gradle/gradle.properties`, so an
+   empty placeholder would silently override a token you stored in your user home file. Leaving
+   it undefined lets the environment variable win.
+
+   If you prefer not to use an environment variable, store it outside the repository instead:
+
+   ```properties
+   # ~/.gradle/gradle.properties
+   intellijPlatformPublishingToken=<token>
+   ```
+3. Bump `version` in `gradle.properties` and add a matching `## [x.y.z]` section to
+   `CHANGELOG.md`. The changelog plugin feeds the Marketplace change notes from it and the build
+   fails if the section is missing; the Marketplace also rejects a second artifact with a version
+   number it has already seen.
+4. Publish:
+
+   ```bash
+   ./gradlew publishPlugin
+   ```
+
+   This signs the ZIP (`signPlugin`), uploads it, and JetBrains then verifies compatibility before
+   users are notified.
+
+To publish to a pre-release channel rather than the default repository:
+
+```kotlin
+intellijPlatform { publishing { channels = listOf("beta") } }
+```
+
 ## Project layout
 
 ```

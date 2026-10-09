@@ -53,4 +53,14 @@ intellijPlatform {
             sinceBuild = "231" // 2023.1 — floor imposed by ProjectActivity and ActionUiKind
         }
     }
+
+    // Automates uploads with `./gradlew publishPlugin`. The token is deliberately NOT declared in
+    // gradle.properties: that file is committed, and an empty value there would outrank
+    // ~/.gradle/gradle.properties and silently win over the real token. Gradle resolves the
+    // ORG_GRADLE_PROJECT_ environment variable ahead of all property files, so an absent variable
+    // simply leaves this provider empty rather than breaking configuration.
+    // Read more: https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html
+    publishing {
+        token = providers.gradleProperty("intellijPlatformPublishingToken")
+    }
 }
