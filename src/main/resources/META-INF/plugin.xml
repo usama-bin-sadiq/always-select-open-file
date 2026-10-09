@@ -6,7 +6,7 @@
     <!-- Overwritten by patchPluginXml from the version in gradle.properties, which is the single
          source of truth. Kept here only so the source tree reads correctly; the value below is
          not what gets published. -->
-    <version>1.2.1</version>
+    <version>1.2.2</version>
     <vendor email="osama.gormani@gmail.com">Always Select Opened File</vendor>
 
     <description><![CDATA[
@@ -37,11 +37,11 @@
     ]]></change-notes>
 
     <!--
-        2023.1 (231) is the floor: the startup activity uses ProjectActivity and
-        AnActionEvent.createEvent(..., ActionUiKind, ...). Both are absent from 2022.3, which was
-        verified by compiling against the 2022.3 platform. No until-build, so newer IDEs work.
+        2024.3 (243) is the floor, established by the JetBrains Plugin Verifier: builds below
+        243 reported compatibility problems against AnActionEvent.createEvent(..., ActionUiKind, ...).
+        No until-build, so newer IDEs work.
     -->
-    <idea-version since-build="231"/>
+    <idea-version since-build="243"/>
 
     <!-- Only the platform module, so the plugin installs on every IntelliJ-based IDE. -->
     <depends>com.intellij.modules.platform</depends>

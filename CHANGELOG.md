@@ -4,6 +4,22 @@
 
 ## Unreleased
 
+## 1.2.2
+
+### Fixed
+
+- Removed the last internal API usage. The startup activity implemented `DataContext` directly to
+  supply a project-carrying data context, but `DataContext.getData(String)` is marked
+  `@ApiStatus.Internal` and `@Deprecated(forRemoval = true)`, which the Plugin Verifier reported as
+  an internal API usage, a scheduled-for-removal usage and a non-extendable violation. The data
+  context is now obtained from `DataManager.getInstance().getDataContext(...)` instead, and nothing
+  is implemented by hand.
+
+### Changed
+
+- Minimum supported IDE raised from 2023.1 to 2024.3. The Plugin Verifier reported compatibility
+  problems for every build below 243.
+
 ## 1.2.1
 
 ### Fixed

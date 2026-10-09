@@ -50,7 +50,7 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "231" // 2023.1 — floor imposed by ProjectActivity and ActionUiKind
+            sinceBuild = "243" // 2024.3 — floor imposed by AnActionEvent.createEvent(..., ActionUiKind, ...)
         }
     }
 

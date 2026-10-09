@@ -20,13 +20,13 @@ project is opened — that is the plugin's purpose.
 
 | | |
 |---|---|
-| Supported since | **2023.1** (build `231`) |
+| Supported since | **2024.3** (build `243`) |
 | Upper bound | none — newer IDEs are supported |
 | Dependencies | `com.intellij.modules.platform` only |
 | API usage | **public API only**, no `@ApiStatus.Internal` |
 
-The `231` floor is set by `ProjectActivity` and `ActionUiKind`, neither of which exists in 2022.3 —
-confirmed by compiling against the 2022.3 platform and getting unresolved-reference errors.
+The `243` floor comes from the JetBrains Plugin Verifier, which reported compatibility problems
+against every build below it.
 
 The option itself lives in `com.intellij.ide.projectView.impl`, which is internal API. The plugin
 never references it. Instead it drives the option through the action the platform registers for it
@@ -46,8 +46,14 @@ registered as a `postStartupActivity` in
    supported entry point: it writes both the per-project state and the shared default, exactly as
    clicking the menu item does.
 
-The `DataContext` passed to the action event carries the project, because `ToggleOptionAction`
-resolves its option from `AnActionEvent.getProject()`.
+The `DataContext` passed to the action event comes from
+`DataManager.getInstance().getDataContext(...)`. It has to carry the project, because
+`ToggleOptionAction` resolves its option from `AnActionEvent.getProject()`.
+
+Note that `DataContext` must **not** be implemented directly: its
+`getData(String)` method is marked `@ApiStatus.Internal` and `@Deprecated(forRemoval = true)`, so
+implementing it registers as an internal API usage, a scheduled-for-removal usage, and a
+non-extendable violation. Earlier versions of this plugin did exactly that.
 
 ## Building
 

@@ -1,15 +1,17 @@
 package com.github.alwaysselectopenedfile
 
+import com.intellij.ide.DataManager
 import com.intellij.openapi.actionSystem.ActionManager
 import com.intellij.openapi.actionSystem.ActionUiKind
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
-import com.intellij.openapi.actionSystem.DataContext
 import com.intellij.openapi.actionSystem.Presentation
 import com.intellij.openapi.actionSystem.ToggleOptionAction
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.openapi.wm.WindowManager
 
 /**
  * Turns on the Project View option "Always Select Opened File" for a project once it has opened.
@@ -36,9 +38,19 @@ class EnableAlwaysSelectOpenedFileActivity : ProjectActivity {
         // Not every IntelliJ-based product ships the Project View, in which case there is
         // nothing to enable.
         val action = ActionManager.getInstance().getAction(ACTION_ID) as? ToggleOptionAction ?: return
+        val frame = WindowManager.getInstance().getFrame(project) ?: return
+
+        // A ToggleOptionAction resolves its option from the project carried by the event's data
+        // context. That context has to come from the platform: DataContext itself is
+        // @ApiStatus.Internal and @ApiStatus.NonExtendable, so it must not be implemented here.
+        val dataContext = DataManager.getInstance().getDataContext(frame.contentPane)
+        if (dataContext.getData(CommonDataKeys.PROJECT) == null) {
+            LOG.warn("Cannot enable '$ACTION_ID': the data context has no project; leaving it unchanged")
+            return
+        }
 
         val event = AnActionEvent.createEvent(
-            ProjectDataContext(project),
+            dataContext,
             Presentation(),
             PLACE,
             ActionUiKind.NONE,
@@ -52,25 +64,11 @@ class EnableAlwaysSelectOpenedFileActivity : ProjectActivity {
         }
     }
 
-    /**
-     * A [ToggleOptionAction] resolves its option from the project carried by the event's
-     * [DataContext], so the project has to be reachable from there for the toggle to take effect.
-     * [DataContext] is public API, so the context is supplied directly rather than reaching for an
-     * implementation from the platform's internal packages.
-     *
-     * `getData(String)` carries `@Deprecated(forRemoval = true)` on the interface itself, so
-     * every implementation has to override it; the suppression is unavoidable and is not a
-     * workaround for an internal API.
-     */
-    @Suppress("OVERRIDE_DEPRECATION")
-    private class ProjectDataContext(private val project: Project) : DataContext {
-        override fun getData(dataId: String): Any? =
-            if (dataId == CommonDataKeys.PROJECT.name) project else null
-    }
-
     private companion object {
         /** Action registered for the "Always Select Opened File" Project View option. */
         const val ACTION_ID = "ProjectView.AutoscrollFromSource"
         const val PLACE = "AlwaysSelectOpenedFileActivity"
+
+        val LOG = Logger.getInstance(EnableAlwaysSelectOpenedFileActivity::class.java)
     }
 }
