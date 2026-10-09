@@ -1,147 +1,115 @@
-# Awesome-plugin
+# Always Select Opened File
 
-[![Twitter Follow](https://img.shields.io/badge/follow-%40JBPlatform-1DA1F2?logo=twitter)](https://twitter.com/JBPlatform)
-[![Developers Forum](https://img.shields.io/badge/JetBrains%20Platform-Join-blue)][jb:forum]
+An IntelliJ Platform plugin that turns on the Project View option
+**Always Select Opened File** (formerly *Autoscroll from Source*) for every project you open, so
+editing a file always highlights and reveals it in the project tree.
 
-## Overview
+## What it does
 
-This repository implements an IntelliJ Platform plugin.
+When a project finishes opening, the plugin enables the built-in Project View option
+`ProjectView.AutoscrollFromSource`.
 
-## Demo Functionality
+- Only ever turns the option **on** — it never toggles an already-enabled option back off.
+- If the option is unavailable (an IDE without a Project View), the plugin quietly does nothing.
+- Works on every IntelliJ-based IDE.
 
-The sample plugin adds a `My Tool Window` tool window with a simple functionality of shuffling a random number.
+If you disable the option from the Project View menu, it will be re-enabled the next time the
+project is opened — that is the plugin's purpose.
 
-## Plugin structure
+## Compatibility
 
-A generated project contains the following content structure:
+| | |
+|---|---|
+| Supported since | **2023.1** (build `231`) |
+| Upper bound | none — newer IDEs are supported |
+| Dependencies | `com.intellij.modules.platform` only |
+| API usage | **public API only**, no `@ApiStatus.Internal` |
+
+The `231` floor is set by `ProjectActivity` and `ActionUiKind`, neither of which exists in 2022.3 —
+confirmed by compiling against the 2022.3 platform and getting unresolved-reference errors.
+
+The option itself lives in `com.intellij.ide.projectView.impl`, which is internal API. The plugin
+never references it. Instead it drives the option through the action the platform registers for it
+(`ProjectView.AutoscrollFromSource`), using public classes from
+`com.intellij.openapi.actionSystem`.
+
+## How it works
+
+`src/main/kotlin/com/github/alwaysselectopenedfile/EnableAlwaysSelectOpenedFileActivity.kt` is
+registered as a `postStartupActivity` in
+[`plugin.xml`](src/main/resources/META-INF/plugin.xml) and implements the public
+`com.intellij.openapi.startup.ProjectActivity` interface:
+
+1. `execute` is a suspending function, so it is handed off to the EDT — the Project View is Swing UI.
+2. The action is looked up by ID through the public `ActionManager`.
+3. `ToggleOptionAction.isSelected` / `setSelected` read and persist the option. `setSelected` is the
+   supported entry point: it writes both the per-project state and the shared default, exactly as
+   clicking the menu item does.
+
+The `DataContext` passed to the action event carries the project, because `ToggleOptionAction`
+resolves its option from `AnActionEvent.getProject()`.
+
+## Building
+
+```bash
+./gradlew buildPlugin      # produces build/distributions/always-select-opened-file-<version>.zip
+./gradlew runIde           # launches a sandbox IDE with the plugin installed
+./gradlew verifyPlugin     # JetBrains Plugin Verifier — checks API compatibility and internal API usage
+```
+
+The artifact is a zip to upload to the
+[JetBrains Marketplace](https://plugins.jetbrains.com/plugin/upload).
+
+### Target platform
+
+The IDE to compile against is set by the `platformPath` property in `gradle.properties`:
+
+```properties
+platformPath = /Applications/WebStorm.app
+```
+
+Override it for a one-off build:
+
+```bash
+./gradlew buildPlugin -PplatformPath=/Applications/IntelliJ\ IDEA\ CE.app
+```
+
+`patchPluginXml` would otherwise overwrite `since-build` with the build number of whatever IDE you
+compiled against, pinning the plugin to that single platform version. The supported range is
+therefore stated explicitly in the `intellijPlatform.pluginConfiguration.ideaVersion` block in
+`build.gradle.kts`.
+
+To check API compatibility against specific IDEs — including internal-API violations — configure
+`pluginVerification` and run `./gradlew verifyPlugin`.
+
+> **Note**
+> `verifyPluginProjectConfiguration` reports two advisories when compiling against a recent IDE:
+> that `since-build` is below the target platform version, and that the Java level is below what
+> the target platform requires. Both come from deliberately supporting 2023.1 while compiling
+> against a newer IDE. Java 17 bytecode loads on old and new IDEs alike, so the warnings are not
+> acted on. Compiling against a 2023.1 IDE (`-PplatformPath=...`) silences them and additionally
+> guarantees that no newer-only API is used by accident.
+
+## Project layout
 
 ```
 .
-├── .run/                   Predefined Run/Debug Configurations
-├── gradle
-│   ├── wrapper/            Gradle Wrapper
-│   ├── libs.versions.toml  Version catalog
-├── src                     Plugin sources
-│   └── main
-│       ├── kotlin/         Kotlin production sources
-│       └── resources/      Plugin resources
-│           ├── META-INF/   Plugin configuration file and logo
-│           └── messages/   Message bundles
-├── .gitignore              Git ignoring rules
-├── build.gradle.kts        Gradle build configuration
-├── gradle.properties       Gradle configuration properties
-├── gradlew                 *nix Gradle Wrapper script
-├── gradlew.bat             Windows Gradle Wrapper script
-├── README.md               This file
-└── settings.gradle.kts     Gradle project settings
+├── .run/                            Run/Debug configurations (IDE, tests, verification)
+├── gradle/libs.versions.toml        Version catalog
+├── src/main/kotlin/com/github/alwaysselectopenedfile/
+│   └── EnableAlwaysSelectOpenedFileActivity.kt
+├── src/main/resources/META-INF/
+│   ├── plugin.xml                   Plugin manifest
+│   └── pluginIcon.svg
+├── CHANGELOG.md                     Changelog (source for the Marketplace change notes)
+├── build.gradle.kts                 Gradle build configuration
+└── gradle.properties                Version and group
 ```
-
-In addition to the configuration files, the most crucial part is the `src` directory, which contains our implementation and the manifest for our plugin – [plugin.xml][file:plugin.xml].
-
-> [!NOTE]
-> To use Java in your plugin, create the `/src/main/java` directory.
-
-The plugin logo is placed in `src/main/resources/META-INF/pluginIcon.svg`.
-See [Plugin Logo][docs:logo] for more information and logo requirements.
-
-## Build script
-
-The [build.gradle.kts][file:build.gradle.kts] is the core of the project definition.
-It applies three Gradle plugins:
-
-| Plugin                             | Description                                                                      |
-|------------------------------------|----------------------------------------------------------------------------------|
-| `org.jetbrains.kotlin.jvm`         | Adds Kotlin support                                                              |
-| `org.jetbrains.changelog`          | Simplifies patching the [CHANGELOG.md][file:CHANGELOG.md] file                   |
-| `org.jetbrains.intellij.platform`  | The [IntelliJ Platform Gradle Plugin][docs:intellij-platform-gradle-plugin-docs] |
-
-The `intellijPlatform` dependencies block selects the IDE to compile against:
-
-```kotlin
-intellijIdea("2025.3.6.1")
-```
-
-See [Target Versions][docs:target-version] for more information.
-
-The `intellijPlatform` dependencies block also contains a dependency on the platform testing framework:
-
-```kotlin
-testFramework(TestFrameworkType.Platform)
-```
-
-See [Testing][docs:testing] for more information
-
-## Plugin configuration file
-
-The plugin configuration file is a [plugin.xml][file:plugin.xml] file located in the `src/main/resources/META-INF` directory.
-It provides general information about the plugin, its dependencies, extensions, and listeners.
-
-You can read more about this file in the [Plugin Configuration File][docs:plugin.xml] section of our documentation.
-
-### Plugin ID and name
-
-Generated plugin ID and name may require adjustment.
-
-These values are generated based on _Group ID_ and _Artifact ID_ provided in the IDE Plugin wizard.
-It is recommended to review `<id>` and `<name>` elements in the plugin.xml file, and adjust them if needed.
-
-Please note that Gradle properties `rootProject.name` and `project.group` don't need to match the `<id>` and `<name>` elements.
-There is no IntelliJ Platform-related reason they should as they serve different functions.
-
-## Predefined Run/Debug configurations
-
-Within the default project structure, there is a `.run` directory provided containing predefined *Run/Debug configurations* that expose corresponding Gradle tasks:
-
-| Configuration name  | Description                                                                                                                                                                         |
-|---------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Run IDE with Plugin | Runs [`:runIde`][docs:intellij-platform-gradle-plugin-runIde] IntelliJ Platform Gradle Plugin task. Use the *Debug* icon for plugin debugging.                                        |
-| Run Tests           | Runs [`:check`][gradle:lifecycle-tasks] Gradle task.                                                                                                                                |
-| Run Verifications   | Runs [`:verifyPlugin`][docs:intellij-platform-gradle-plugin-verifyPlugin] IntelliJ Platform Gradle Plugin task to check the plugin compatibility against the specified IntelliJ IDEs. |
-
-> [!NOTE]
-> You can find the logs from the running task in the `idea.log` tab.
-
-## Publishing the plugin
-
-> [!TIP]
-> Make sure to follow all guidelines listed in [Publishing a Plugin][docs:publishing] to follow all recommended and required steps.
-
-Releasing a plugin to [JetBrains Marketplace](https://plugins.jetbrains.com) is a straightforward operation that uses the `publishPlugin` Gradle task provided by the [intellij-platform-gradle-plugin][docs:intellij-platform-gradle-plugin-docs].
-
-You can also upload the plugin to the [JetBrains Plugin Repository](https://plugins.jetbrains.com/plugin/upload) manually via UI.
 
 ## Useful links
 
-- [IntelliJ Platform SDK Plugin SDK][docs]
-- [IntelliJ Platform Gradle Plugin Documentation][docs:intellij-platform-gradle-plugin-docs]
-- [IntelliJ Platform Explorer][jb:ipe]
-- [JetBrains Marketplace Quality Guidelines][jb:quality-guidelines]
-- [IntelliJ Platform UI Guidelines][jb:ui-guidelines]
-- [JetBrains Marketplace Paid Plugins][jb:paid-plugins]
-- [IntelliJ SDK Code Samples][gh:code-samples]
-
-[docs]: https://plugins.jetbrains.com/docs/intellij
-[docs:plugin.xml]: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html?from=IJPluginReadmeFile
-[docs:publishing]: https://plugins.jetbrains.com/docs/intellij/publishing-plugin.html?from=IJPluginReadmeFile
-[docs:intellij-platform-gradle-plugin-docs]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html?from=IJPluginReadmeFile
-[docs:intellij-platform-gradle-plugin-runIde]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html?from=IJPluginReadmeFile#runIde
-[docs:intellij-platform-gradle-plugin-verifyPlugin]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-tasks.html?from=IJPluginReadmeFile#verifyPlugin
-[docs:logo]: https://plugins.jetbrains.com/docs/intellij/plugin-icon-file.html?from=IJPluginReadmeFile
-[docs:target-version]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#target-versions
-[docs:testing]: https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin-dependencies-extension.html?from=IJPluginReadmeFile#testing
-
-[file:build.gradle.kts]: ./build.gradle.kts
-[file:CHANGELOG.md]: ./CHANGELOG.md
-[file:gradle.properties]: ./gradle.properties
-[file:plugin.xml]: ./src/main/resources/META-INF/plugin.xml
-
-[gh:code-samples]: https://github.com/JetBrains/intellij-sdk-code-samples
-
-[gradle:lifecycle-tasks]: https://docs.gradle.org/current/userguide/java_plugin.html#lifecycle_tasks
-
-[jb:github]: https://github.com/JetBrains/.github/blob/main/profile/README.md
-[jb:forum]: https://platform.jetbrains.com/
-[jb:quality-guidelines]: https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html
-[jb:paid-plugins]: https://plugins.jetbrains.com/docs/marketplace/paid-plugins-marketplace.html
-[jb:ipe]: https://jb.gg/ipe
-[jb:ui-guidelines]: https://jetbrains.github.io/ui
+- [IntelliJ Platform Plugin SDK](https://plugins.jetbrains.com/docs/intellij)
+- [Internal API Migration](https://plugins.jetbrains.com/docs/intellij/api-internal.html)
+- [Plugin configuration file reference](https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html)
+- [IntelliJ Platform Gradle Plugin](https://plugins.jetbrains.com/docs/intellij/tools-intellij-platform-gradle-plugin.html)
+- [JetBrains Marketplace Quality Guidelines](https://plugins.jetbrains.com/docs/marketplace/quality-guidelines.html)

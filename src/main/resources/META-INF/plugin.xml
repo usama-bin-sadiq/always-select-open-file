@@ -3,28 +3,30 @@
 <idea-plugin>
     <id>com.github.alwaysselectopenedfile</id>
     <name>Always Select Opened File</name>
+    <!-- Keep in sync with the version in gradle.properties -->
     <version>1.2.0</version>
-    <vendor email="" url="">Always Select Opened File</vendor>
+    <vendor email="osama.gormani@gmail.com">Always Select Opened File</vendor>
 
     <description><![CDATA[
         Automatically enables the Project View option
-        <b>Always Select Opened File</b> (formerly Autoscroll from Source)
-        for every project when it is opened.
+        <b>Always Select Opened File</b> (formerly <i>Autoscroll from Source</i>)
+        for every project when it is opened, so the file you are editing is always
+        selected and revealed in the project tree.
         <br/><br/>
-        If you turn the option off manually for a project, the plugin will not
-        force it back on.
+        If you switch the option off from the Project View menu, it is turned back on
+        the next time you open that project.
         <br/><br/>
-        Uses only public IntelliJ Platform APIs (no internal API).
-        Works on all IntelliJ-based IDEs.
+        Works on all IntelliJ-based IDEs, using public IntelliJ Platform APIs only.
     ]]></description>
 
     <change-notes><![CDATA[
         <h3>1.2.0</h3>
         <ul>
+          <li>Fixed the plugin failing to load: the registered startup activity class was missing</li>
           <li>Completely rewritten using <b>only public APIs</b></li>
           <li>Removed all internal API usage (ProjectViewState)</li>
           <li>Removed scheduled-for-removal ProjectManagerListener.projectOpened</li>
-          <li>Compatible with all IntelliJ-based IDEs</li>
+          <li>Compatible with all IntelliJ-based IDEs, from 2023.1 onwards</li>
         </ul>
         <h3>1.1.x</h3>
         <ul>
@@ -32,10 +34,14 @@
         </ul>
     ]]></change-notes>
 
-    <!-- Compatible with 2022.1 and newer, no upper limit -->
-    <idea-version since-build="221"/>
+    <!--
+        2023.1 (231) is the floor: the startup activity uses ProjectActivity and
+        AnActionEvent.createEvent(..., ActionUiKind, ...). Both are absent from 2022.3, which was
+        verified by compiling against the 2022.3 platform. No until-build, so newer IDEs work.
+    -->
+    <idea-version since-build="231"/>
 
-    <!-- Only platform → works on every IntelliJ-based product -->
+    <!-- Only the platform module, so the plugin installs on every IntelliJ-based IDE. -->
     <depends>com.intellij.modules.platform</depends>
 
     <extensions defaultExtensionNs="com.intellij">
